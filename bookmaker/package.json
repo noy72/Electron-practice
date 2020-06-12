@@ -5,11 +5,15 @@
   "main": "./app/main.js",
   "scripts": {
     "start": "electron .",
+    "lint": "eslint app --fix",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "electron": "^9.0.3"
+  },
+  "devDependencies": {
+    "eslint": "^7.2.0"
   }
 }
