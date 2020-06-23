@@ -1,3 +1,7 @@
+## 所感
+- 解説に使われている Electron のバージョンは 2.0.4
+- 基礎的な JavaScript の知識がないと出来なさそう．
+
 ## Section 2.3, p.26
 `mainWindow.webContents.loadFile('index.html');`だとHTMLが表示されない．
 `mainWindow.webContents.loadFile('./app/index.html');`だと表示された．
