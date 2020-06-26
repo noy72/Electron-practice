@@ -18,3 +18,6 @@ mainWindow = new BrowserWindow({
     }
 );
 ```
+
+## Section 3.4 p.59
+`index.html`で`require('./renderer');`しているため，`nodeIntegration`を`true`にする必要がある．
