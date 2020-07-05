@@ -34,7 +34,26 @@ const createWindow = exports.createWindow = () => {
     );
     newWindow.on('closed', () => {
         windows.delete(newWindow);
+        stopWatchingFile(newWindow);
         newWindow = null;
+    });
+
+    newWindow.on('close', (event) => {
+        if (newWindow.isDocumentEdited()) {
+            event.preventDefault();
+            const result = dialog.showMessageBoxSync(newWindow, {
+                type: 'warning',
+                title: 'Quit with Unsaved Changes?',
+                message: 'Your changes will be lost if you do not save.',
+                buttons: [
+                    'Quit Anyway',
+                    'Cancel',
+                ],
+                defaultId: 0,
+                cancelId: 1
+            });
+            if (result === 0) newWindow.destroy();
+        }
     });
 
     windows.add(newWindow);
@@ -136,3 +155,20 @@ const saveMarkdown = exports.saveMarkdown = (targetWindow, file, content) => {
     openFile(targetWindow, file);
 };
 
+const startWatchingFile = (targetWindow, file) => {
+    stopWatchingFile(targetWindow);
+    const watcher = fs.watch(file, (event) => {
+        if (event === 'change') {
+            const content = fs.readFileSync(file);
+            targetWindow.webContents.send('file-changed', file, content);
+        }
+    });
+    openFiles.set(targetWindow, watcher);
+};
+
+const stopWatchingFile = (targetWindow) => {
+    if (openFiles.has(targetWindow)) {
+        openFiles.get(targetWindow).stop();
+        openFiles.delete(targetWindow);
+    }
+};
