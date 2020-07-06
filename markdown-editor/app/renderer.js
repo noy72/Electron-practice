@@ -1,6 +1,7 @@
 const marked = require('marked');
 const path = require('path');
 const {remote, ipcRenderer} = require('electron');
+const {Menu} = remote;
 const mainProcess = remote.require('./main.js');
 const currentWindow = remote.getCurrentWindow();
 
@@ -44,6 +45,19 @@ const renderFile = (file, content) => {
     updateUserInterface(false);
 };
 
+const markdownContextMenu = Menu.buildFromTemplate([
+    {
+        label: 'Open File', click() {
+            mainProcess.getFileFromUser();
+        }
+    },
+    {type: 'separator'},
+    {label: 'Cut', role: 'cut'},
+    {label: 'Copy', role: 'copy'},
+    {label: 'Paste', role: 'paste'},
+    {label: 'Select All', role: 'selectall'},
+]);
+
 markdownView.addEventListener('keyup', (event) => {
     const currentContent = event.target.value;
     renderMarkdownToHtml(currentContent);
@@ -73,6 +87,11 @@ markdownView.addEventListener('drop', (event) => {
     }
     markdownView.classList.remove('drag-over');
     markdownView.classList.remove('drag-error');
+});
+
+markdownView.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    markdownContextMenu.popup();
 });
 
 
@@ -130,6 +149,10 @@ ipcRenderer.on('file-changed', (event, file, content) => {
         cancelId: 1
     });
     renderFile(file, content);
+});
+
+ipcRenderer.on('save-html', () => {
+    mainProcess.saveHtml(currentWindow, filePath, markdownView.value);
 });
 
 

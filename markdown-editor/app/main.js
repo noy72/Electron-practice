@@ -1,4 +1,5 @@
-const {app, BrowserWindow, dialog} = require('electron');
+const {app, BrowserWindow, dialog, Menu} = require('electron');
+const applicationMenu = require('./application-menu');
 const fs = require('fs');
 
 
@@ -62,6 +63,7 @@ const createWindow = exports.createWindow = () => {
 
 app.on('ready', () => {
     createWindow();
+    Menu.setApplicationMenu(applicationMenu);
     /*
     mainWindow = new BrowserWindow({
             show: false,
