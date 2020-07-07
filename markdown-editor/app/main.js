@@ -1,5 +1,5 @@
 const {app, BrowserWindow, dialog, Menu} = require('electron');
-const applicationMenu = require('./application-menu');
+const createApplicationMenu = require('./application-menu');
 const fs = require('fs');
 
 
@@ -36,8 +36,11 @@ const createWindow = exports.createWindow = () => {
     newWindow.on('closed', () => {
         windows.delete(newWindow);
         stopWatchingFile(newWindow);
+        createApplicationMenu();
         newWindow = null;
     });
+
+    newWindow.on('focus', createApplicationMenu);
 
     newWindow.on('close', (event) => {
         if (newWindow.isDocumentEdited()) {
@@ -63,7 +66,7 @@ const createWindow = exports.createWindow = () => {
 
 app.on('ready', () => {
     createWindow();
-    Menu.setApplicationMenu(applicationMenu);
+    createApplicationMenu();
     /*
     mainWindow = new BrowserWindow({
             show: false,
@@ -124,8 +127,10 @@ const getFileFromUser = exports.getFileFromUser = (targetWindow) => {
 const openFile = (targetWindow, file) => {
     const content = fs.readFileSync(file).toString();
     app.addRecentDocument(file);
+    startWatchingFile(targetWindow, file);
     targetWindow.setRepresentedFilename(file);
     targetWindow.webContents.send('file-opened', file, content);
+    createApplicationMenu();
 };
 
 const saveHtml = exports.saveHtml = (targetWindow, content) => {
@@ -162,7 +167,7 @@ const startWatchingFile = (targetWindow, file) => {
     const watcher = fs.watch(file, (event) => {
         if (event === 'change') {
             const content = fs.readFileSync(file);
-            targetWindow.webContents.send('file-changed', file, content);
+            targetWindow.webContents.send('file-changed', file, content.toString());
         }
     });
     openFiles.set(targetWindow, watcher);

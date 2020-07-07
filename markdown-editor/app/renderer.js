@@ -1,6 +1,6 @@
 const marked = require('marked');
 const path = require('path');
-const {remote, ipcRenderer} = require('electron');
+const {remote, ipcRenderer, shell} = require('electron');
 const {Menu} = remote;
 const mainProcess = remote.require('./main.js');
 const currentWindow = remote.getCurrentWindow();
@@ -42,21 +42,53 @@ const renderFile = (file, content) => {
     originalContent = content;
     markdownView.value = content;
     renderMarkdownToHtml(content);
+
+    showFileButton.disabled = false;
+    openInDefaultButton.disabled = false;
+
     updateUserInterface(false);
 };
 
-const markdownContextMenu = Menu.buildFromTemplate([
-    {
-        label: 'Open File', click() {
-            mainProcess.getFileFromUser();
-        }
-    },
-    {type: 'separator'},
-    {label: 'Cut', role: 'cut'},
-    {label: 'Copy', role: 'copy'},
-    {label: 'Paste', role: 'paste'},
-    {label: 'Select All', role: 'selectall'},
-]);
+const showFile = () => {
+    if (!filePath) {
+        return alert('This file has not been saved to the filesystem.');
+    }
+    shell.showItemInFolder(filePath);
+};
+
+const openInDefaultApplication = () => {
+    if (!filePath) {
+        return alert('This file has not been saved to the filesystem.');
+    }
+    shell.openPath(filePath).then(() => {
+    });
+};
+
+const createContextMenu = () => {
+    return Menu.buildFromTemplate([
+        {
+            label: 'Open File',
+            click() {
+                mainProcess.getFileFromUser();
+            }
+        },
+        {
+            label: 'Show File in Folder',
+            click: showFile,
+            enabled: !!filePath
+        },
+        {
+            label: 'Open in Default',
+            click: openInDefaultApplication,
+            enabled: !!filePath
+        },
+        {type: 'separator'},
+        {label: 'Cut', role: 'cut'},
+        {label: 'Copy', role: 'copy'},
+        {label: 'Paste', role: 'paste'},
+        {label: 'Select All', role: 'selectall'},
+    ]);
+};
 
 markdownView.addEventListener('keyup', (event) => {
     const currentContent = event.target.value;
@@ -91,7 +123,7 @@ markdownView.addEventListener('drop', (event) => {
 
 markdownView.addEventListener('contextmenu', (event) => {
     event.preventDefault();
-    markdownContextMenu.popup();
+    createContextMenu().popup();
 });
 
 
@@ -139,21 +171,33 @@ ipcRenderer.on('file-opened', (event, file, content) => {
 });
 
 ipcRenderer.on('file-changed', (event, file, content) => {
-    const result = remote.dialog.showMessageBox(currentWindow, {
+    const result = remote.dialog.showMessageBoxSync(currentWindow, {
         type: 'warning',
         title: 'Overwrite Current Unsaved Changes?',
-        message: 'Another application has changed this file. Load changes?', buttons: [
+        message: 'Another application has changed this file. Load changes?',
+        buttons: [
             'Yes',
-            'Cancel',],
+            'Cancel',
+        ],
         defaultId: 0,
         cancelId: 1
     });
+    if (result === 1) {
+        return
+    }
     renderFile(file, content);
 });
 
 ipcRenderer.on('save-html', () => {
     mainProcess.saveHtml(currentWindow, filePath, markdownView.value);
 });
+
+ipcRenderer.on('show-file', showFile);
+ipcRenderer.on('open-in-default', openInDefaultApplication);
+
+
+showFileButton.addEventListener('click', showFile);
+openInDefaultButton.addEventListener('click', openInDefaultApplication);
 
 
 document.addEventListener('dragstart', event => event.preventDefault());

@@ -52,3 +52,24 @@ const watcher = fs.watch(file, (event) => {
 
 ## Section 6.6 p.120
 `dialog.showMessageBox` -> `dialog.showMessageBoxSync`
+
+## Section 8.1 p.146
+### Listing 8.2
+`shell.openItem(filePath);` -> `shell.openPath(filePath)`
+https://www.electronjs.org/docs/api/shell#shellopenpathpath
+
+
+## ?
+```javascript
+const startWatchingFile = (targetWindow, file) => {
+    stopWatchingFile(targetWindow);
+    const watcher = fs.watch(file, (event) => {
+        if (event === 'change') {
+            const content = fs.readFileSync(file);
+            // content は Buffer なので，content.toString() しないと数列が表示される．
+            targetWindow.webContents.send('file-changed', file, content.toString());
+        }
+    });
+    openFiles.set(targetWindow, watcher);
+};
+```

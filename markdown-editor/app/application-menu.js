@@ -1,9 +1,14 @@
-const {app, dialog, Menu, MenuItem, shell} = require('electron');
+const {app, dialog, Menu, MenuItem, shell, BrowserWindow} = require('electron');
 const mainProcess = require('./main');
 
-const template = [
-        {
+const createApplicationMenu = () => {
+    const hasOneOrMoreWindows = !!BrowserWindow.getAllWindows().length;
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    const hasFilePath = !!(focusedWindow &&
+        focusedWindow.getRepresentedFilename());
 
+    const template = [
+        {
             label: 'File',
             submenu: [
                 {
@@ -27,9 +32,9 @@ const template = [
                         });
                     },
                 },
-
                 {
                     label: 'Save File',
+                    enabled: hasOneOrMoreWindows,
                     accelerator: 'CommandOrControl+S',
                     click(item, focusedWindow) {
                         if (!focusedWindow) {
@@ -43,6 +48,7 @@ const template = [
                 {
 
                     label: 'Export HTML',
+                    enabled: hasOneOrMoreWindows,
                     accelerator: 'Shift+CommandOrControl+S',
                     click(item, focusedWindow) {
                         if (!focusedWindow) {
@@ -52,6 +58,35 @@ const template = [
                         }
                         focusedWindow.webContents.send('save-html');
                     },
+                },
+                {type: 'separator'},
+                {
+                    label: 'Show File',
+                    enabled: hasFilePath,
+                    accelerator: 'Shift+CommandOrControl+S',
+                    click(item, focusedWindow) {
+                        if (!focusedWindow) {
+                            return dialog.showErrorBox(
+                                'Cannot Show File\'s Location',
+                                'There is currently no active document show.'
+                            );
+                        }
+                        focusedWindow.webContents.send('show-file');
+                    },
+                },
+                {
+                    label: 'Open in Default Editor',
+                    enabled: hasFilePath,
+                    accelerator: 'Shift+CommandOrControl+S',
+                    click(item, focusedWindow) {
+                        if (!focusedWindow) {
+                            return dialog.showErrorBox(
+                                'Cannot Open File in Default Editor',
+                                'There is currently no active document to open.'
+                            );
+                        }
+                        focusedWindow.webContents.send('open-in-default');
+                    }
                 },
             ],
         },
@@ -126,65 +161,65 @@ const template = [
                 }
             ]
         }
-    ]
-;
+    ];
 
+    if (process.platform === 'darwin') {
+        const name = app.getName();
+        template.unshift({label: name});
+    }
 
-if (process.platform === 'darwin') {
-    const name = app.getName();
-    template.unshift({label: name});
-}
-
-if (process.platform === 'darwin') {
-    const name = app.getName()
-    template.unshift(
-        {
-            label: name,
-            submenu: [
-                {
-                    label: `About ${name}`,
-                    role: 'about',
-                },
-                {type: 'separator'},
-                {
-                    label: 'Services',
-                    role: 'services',
-                    submenu: [],
-                },
-                {type: 'separator'},
-                {
-                    label: `Hide ${name}`,
-                    accelerator: 'Command+H',
-                    role: 'hide',
-                },
-                {
-                    label: 'Hide Others',
-                    accelerator: 'Command+Alt+H',
-                    role: 'hideothers',
-                },
-                {
-                    role: 'unhide',
-                },
-                {type: 'separator'},
-                {
-                    label: `Quit ${name}`,
-                    accelerator: 'Command+Q', click() {
-                        app.quit();
+    if (process.platform === 'darwin') {
+        const name = app.getName();
+        template.unshift(
+            {
+                label: name,
+                submenu: [
+                    {
+                        label: `About ${name}`,
+                        role: 'about',
                     },
-                },
-            ],
-        }
-    );
-    const windowMenu = template.find(item => item.label === 'Window');
-    windowMenu.role = 'window';
-    windowMenu.submenu.push(
-        {type: 'separator'},
-        {
-            label: 'Bring All to Front',
-            role: 'front',
-        }
-    );
-}
+                    {type: 'separator'},
+                    {
+                        label: 'Services',
+                        role: 'services',
+                        submenu: [],
+                    },
+                    {type: 'separator'},
+                    {
+                        label: `Hide ${name}`,
+                        accelerator: 'Command+H',
+                        role: 'hide',
+                    },
+                    {
+                        label: 'Hide Others',
+                        accelerator: 'Command+Alt+H',
+                        role: 'hideothers',
+                    },
+                    {
+                        role: 'unhide',
+                    },
+                    {type: 'separator'},
+                    {
+                        label: `Quit ${name}`,
+                        accelerator: 'Command+Q', click() {
+                            app.quit();
+                        },
+                    },
+                ],
+            }
+        );
+        const windowMenu = template.find(item => item.label === 'Window');
+        windowMenu.role = 'window';
+        windowMenu.submenu.push(
+            {type: 'separator'},
+            {
+                label: 'Bring All to Front',
+                role: 'front',
+            }
+        );
+    }
+    return Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+};
 
 
-module.exports = Menu.buildFromTemplate(template);
+module.exports = createApplicationMenu;
